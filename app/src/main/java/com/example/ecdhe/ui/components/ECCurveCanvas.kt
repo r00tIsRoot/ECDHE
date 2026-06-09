@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -243,9 +244,6 @@ private fun DrawScope.drawCurve(
     drawPath(lowerPath, curveColor, style = curveStroke)
 }
 
-/**
- * construction 직선(접선/할선)을 그리고 관련 점들을 표시
- */
 private fun DrawScope.drawConstructionLine(
     step: ConstructionStep,
     lineColor: Color,
@@ -256,8 +254,7 @@ private fun DrawScope.drawConstructionLine(
 ) {
     val dashEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 6f), 0f)
 
-    // 직선을 뷰포트 양 끝까지 연장
-    val xMin = -4.0 // viewport보다 약간 넓게
+    val xMin = -4.0
     val xMax = 5.0
     val y1 = step.slope * xMin + step.intercept
     val y2 = step.slope * xMax + step.intercept
@@ -271,30 +268,44 @@ private fun DrawScope.drawConstructionLine(
         cap = StrokeCap.Round
     )
 
-    // 접점/두 점 표시 (작은 원)
-    for (p in listOf(step.point1, step.point2)) {
+    val labelStyle = TextStyle(fontSize = 10.sp, color = lineColor, fontWeight = FontWeight.Bold)
+
+    for ((i, p) in listOf(step.point1, step.point2).withIndex()) {
         if (!p.isInfinity && isVisible(p)) {
             val sx = xToScreen(p.x)
             val sy = yToScreen(p.y)
             drawCircle(color = lineColor, radius = 5f, center = Offset(sx, sy))
             drawCircle(color = Color.White, radius = 3f, center = Offset(sx, sy))
+
+            val inputLabel = if (step.point1 == step.point2) "P" else if (i == 0) "P₁" else "P₂"
+            val labelResult = textMeasurer.measure(
+                text = inputLabel, style = labelStyle
+            )
+            drawText(textLayoutResult = labelResult, topLeft = Offset(sx + 6f, sy - 12f))
         }
     }
 
-    // 세 번째 교점 (반사 전) - 곡선 위에 표시
     if (!step.reflectedPoint.isInfinity && isVisible(step.reflectedPoint)) {
         val sx = xToScreen(step.reflectedPoint.x)
         val sy = yToScreen(step.reflectedPoint.y)
         drawCircle(color = lineColor.copy(alpha = 0.4f), radius = 6f, center = Offset(sx, sy))
+
+        val labelResult = textMeasurer.measure(
+            text = "교점", style = labelStyle.copy(color = lineColor.copy(alpha = 0.6f))
+        )
+        drawText(textLayoutResult = labelResult, topLeft = Offset(sx + 7f, sy - 12f))
     }
 
-    // 결과점 = 반사 후 (공개키 또는 중간 결과)
     if (!step.resultPoint.isInfinity && isVisible(step.resultPoint)) {
         val sx = xToScreen(step.resultPoint.x)
         val sy = yToScreen(step.resultPoint.y)
         drawCircle(color = lineColor, radius = 7f, center = Offset(sx, sy))
         drawCircle(color = Color.White, radius = 4f, center = Offset(sx, sy))
         drawCircle(color = lineColor, radius = 2f, center = Offset(sx, sy))
+
+        val resultLabel = if (step.isTangent) "2P" else "P+Q"
+        val labelResult = textMeasurer.measure(text = resultLabel, style = labelStyle)
+        drawText(textLayoutResult = labelResult, topLeft = Offset(sx + 8f, sy - 7f))
     }
 }
 
