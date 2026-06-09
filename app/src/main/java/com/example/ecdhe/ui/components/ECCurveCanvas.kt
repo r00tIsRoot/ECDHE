@@ -54,6 +54,7 @@ fun ECCurveCanvas(
     viewportY: ClosedFloatingPointRange<Double> = -4.0..4.0,
     showGrid: Boolean = true,
     constructionSteps: List<ConstructionStep> = emptyList(),
+    canvasHeight: androidx.compose.ui.unit.Dp = 320.dp,
     modifier: Modifier = Modifier
 ) {
     val textMeasurer = rememberTextMeasurer()
@@ -61,7 +62,7 @@ fun ECCurveCanvas(
     Canvas(
         modifier = modifier
             .fillMaxWidth()
-            .height(320.dp)
+            .height(canvasHeight)
     ) {
         val padding = 40f
         val chartLeft = padding

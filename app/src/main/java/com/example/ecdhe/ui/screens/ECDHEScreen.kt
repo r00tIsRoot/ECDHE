@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -165,96 +166,204 @@ fun ECDHEScreen() {
             )
         }
     ) { padding ->
-        Column(
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .verticalScroll(scrollState)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // 단계 표시기
-            StepIndicator(
-                steps = ECDHEStep.entries.toList(),
-                currentStep = state.currentStep,
-                onStepClick = { state.currentStep = it }
-            )
+            val isLandscape = maxWidth > maxHeight
+            val horizontalPadding = 12.dp
+            val availHeight = maxHeight
 
-            // 그래프
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Text(
-                        text = "타원곡선: ${state.curve.equationStr()}",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    ECCurveCanvas(
-                        curve = state.curve,
-                        points = state.getGraphPoints(),
-                        viewportX = state.getViewportX(),
-                        viewportY = state.getViewportY(),
-                        constructionSteps = state.getConstructionSteps(),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            }
-
-            // 단계별 콘텐츠
-            AnimatedContent(
-                targetState = state.currentStep,
-                transitionSpec = {
-                    fadeIn(tween(300)) togetherWith fadeOut(tween(300))
-                },
-                label = "step_content"
-            ) { step ->
-                StepContent(
-                    step = step,
-                    state = state
-                )
-            }
-
-            // 제어 버튼
-            ControlButtons(
-                state = state,
-                onPrev = {
-                    val ordinal = state.currentStep.ordinal
-                    if (ordinal > 0) {
-                        state.currentStep = ECDHEStep.entries[ordinal - 1]
-                    }
-                },
-                onNext = {
-                    val ordinal = state.currentStep.ordinal
-                    if (ordinal < ECDHEStep.entries.size - 1) {
-                        val canProceed = if (state.currentStep == ECDHEStep.ALICE_KEYGEN ||
-                            state.currentStep == ECDHEStep.BOB_KEYGEN
-                        ) {
-                            state.applyKeys()
-                        } else true
-                        if (canProceed) {
-                            if (state.currentStep == ECDHEStep.BOB_KEYGEN) {
-                                state.runECDHE()
-                            }
-                            state.currentStep = ECDHEStep.entries[ordinal + 1]
+            if (isLandscape) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = horizontalPadding, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Card(
+                        modifier = Modifier
+                            .weight(0.55f)
+                            .fillMaxHeight(),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(10.dp)) {
+                            Text(
+                                text = "타원곡선: ${state.curve.equationStr()}",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            ECCurveCanvas(
+                                curve = state.curve,
+                                points = state.getGraphPoints(),
+                                viewportX = state.getViewportX(),
+                                viewportY = state.getViewportY(),
+                                constructionSteps = state.getConstructionSteps(),
+                                canvasHeight = availHeight - 80.dp,
+                                modifier = Modifier.fillMaxWidth()
+                            )
                         }
                     }
-                },
-                onReset = {
-                    state.currentStep = ECDHEStep.PARAMS
-                    state.aliceInput = "3"
-                    state.bobInput = "2"
-                    state.alicePrivateKey = 3
-                    state.bobPrivateKey = 2
-                    state.result = null
-                    state.showError = false
-                }
-            )
 
-            Spacer(modifier = Modifier.height(8.dp))
+                    Column(
+                        modifier = Modifier
+                            .weight(0.45f)
+                            .fillMaxHeight(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        StepIndicator(
+                            steps = ECDHEStep.entries.toList(),
+                            currentStep = state.currentStep,
+                            onStepClick = { state.currentStep = it }
+                        )
+
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .verticalScroll(scrollState)
+                        ) {
+                            AnimatedContent(
+                                targetState = state.currentStep,
+                                transitionSpec = {
+                                    fadeIn(tween(300)) togetherWith fadeOut(tween(300))
+                                },
+                                label = "step_content"
+                            ) { step ->
+                                StepContent(
+                                    step = step,
+                                    state = state
+                                )
+                            }
+                        }
+
+                        ControlButtons(
+                            state = state,
+                            onPrev = {
+                                val ordinal = state.currentStep.ordinal
+                                if (ordinal > 0) {
+                                    state.currentStep = ECDHEStep.entries[ordinal - 1]
+                                }
+                            },
+                            onNext = {
+                                val ordinal = state.currentStep.ordinal
+                                if (ordinal < ECDHEStep.entries.size - 1) {
+                                    val canProceed = if (state.currentStep == ECDHEStep.ALICE_KEYGEN ||
+                                        state.currentStep == ECDHEStep.BOB_KEYGEN
+                                    ) {
+                                        state.applyKeys()
+                                    } else true
+                                    if (canProceed) {
+                                        if (state.currentStep == ECDHEStep.BOB_KEYGEN) {
+                                            state.runECDHE()
+                                        }
+                                        state.currentStep = ECDHEStep.entries[ordinal + 1]
+                                    }
+                                }
+                            },
+                            onReset = {
+                                state.currentStep = ECDHEStep.PARAMS
+                                state.aliceInput = "3"
+                                state.bobInput = "2"
+                                state.alicePrivateKey = 3
+                                state.bobPrivateKey = 2
+                                state.result = null
+                                state.showError = false
+                            }
+                        )
+                    }
+                }
+            } else {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(scrollState)
+                        .padding(horizontal = horizontalPadding, vertical = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    StepIndicator(
+                        steps = ECDHEStep.entries.toList(),
+                        currentStep = state.currentStep,
+                        onStepClick = { state.currentStep = it }
+                    )
+
+                    // 그래프
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text(
+                                text = "타원곡선: ${state.curve.equationStr()}",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            ECCurveCanvas(
+                                curve = state.curve,
+                                points = state.getGraphPoints(),
+                                viewportX = state.getViewportX(),
+                                viewportY = state.getViewportY(),
+                                constructionSteps = state.getConstructionSteps(),
+                                canvasHeight = minOf(300.dp, availHeight * 0.35f),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    }
+
+                    // 단계별 콘텐츠
+                    AnimatedContent(
+                        targetState = state.currentStep,
+                        transitionSpec = {
+                            fadeIn(tween(300)) togetherWith fadeOut(tween(300))
+                        },
+                        label = "step_content"
+                    ) { step ->
+                        StepContent(
+                            step = step,
+                            state = state
+                        )
+                    }
+
+                    // 제어 버튼
+                    ControlButtons(
+                        state = state,
+                        onPrev = {
+                            val ordinal = state.currentStep.ordinal
+                            if (ordinal > 0) {
+                                state.currentStep = ECDHEStep.entries[ordinal - 1]
+                            }
+                        },
+                        onNext = {
+                            val ordinal = state.currentStep.ordinal
+                            if (ordinal < ECDHEStep.entries.size - 1) {
+                                val canProceed = if (state.currentStep == ECDHEStep.ALICE_KEYGEN ||
+                                    state.currentStep == ECDHEStep.BOB_KEYGEN
+                                ) {
+                                    state.applyKeys()
+                                } else true
+                                if (canProceed) {
+                                    if (state.currentStep == ECDHEStep.BOB_KEYGEN) {
+                                        state.runECDHE()
+                                    }
+                                    state.currentStep = ECDHEStep.entries[ordinal + 1]
+                                }
+                            }
+                        },
+                        onReset = {
+                            state.currentStep = ECDHEStep.PARAMS
+                            state.aliceInput = "3"
+                            state.bobInput = "2"
+                            state.alicePrivateKey = 3
+                            state.bobPrivateKey = 2
+                            state.result = null
+                            state.showError = false
+                        }
+                    )
+                }
+            }
         }
     }
 }
@@ -405,6 +514,49 @@ private fun ParamsContent(state: ECDHEScreenState) {
             "📐 ECDHE는 타원곡선의 '이산 로그 문제(ECDLP)'의 어려움에 기반합니다. " +
                     "G에서 출발해 스칼라 곱셈 k·G는 쉽게 계산할 수 있지만, " +
                     "결과 점 Q에서 k를 역산하는 것은 사실상 불가능합니다."
+        )
+
+        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+        Text(
+            text = "3. 스칼라 곱셈 k·G의 원리",
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold
+        )
+        Text(
+            text = "공개키 QA = dA·G는 '생성점 G를 개인키 dA번 더한다'는 의미입니다:",
+            style = MaterialTheme.typography.bodyMedium
+        )
+        Text(
+            text = "dA·G = G + G + ··· + G  (dA번)",
+            style = MaterialTheme.typography.bodyLarge,
+            fontFamily = FontFamily.Monospace,
+            fontWeight = FontWeight.Bold
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = "타원곡선에서 점의 덧셈은 기하학적으로 정의됩니다:",
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold
+        )
+        Text(
+            text = "• P + P (두 배): P를 지나는 접선 → 곡선과 교점 → x축 대칭\n" +
+                    "• P + Q (합): P, Q를 잇는 할선 → 곡선과 교점 → x축 대칭",
+            style = MaterialTheme.typography.bodyMedium
+        )
+        Text(
+            text = "dA가 20 이상으로 커져도 'double-and-add' 알고리즘으로 빠르게 계산합니다:",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = "① dA를 이진수로 분해 (예: 13 → 1101₂)\n" +
+                    "② G부터 시작해 매 단계 'doubling'(접선)으로 2배, 4배, 8배, … 점 생성\n" +
+                    "③ 이진수의 1인 자리에 해당하는 점만 'add'(할선)로 누적 합산\n" +
+                    "→ dA번 일일이 더할 필요 없이 log₂(dA)회 doubling + α로 계산 완료",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontFamily = FontFamily.Monospace
         )
     }
 }
@@ -849,48 +1001,44 @@ private fun InfoBox(text: String) {
     }
 }
 
-/** 스칼라 곱셈 설명 텍스트 생성 */
 private fun buildScalarMultExplanation(k: Int, resultName: String): String {
     if (k <= 0) return "k = $k (정의되지 않음)"
     if (k == 1) return "1 × G = G → $resultName = G"
 
     val parts = mutableListOf<String>()
-    var n = k
-    var step = 1
-
-    // 이진 표현
     val binary = k.toString(2)
-    parts.add("$k (이진: ${binary})")
-
-    var current = "G"
     val bits = binary.reversed()
 
-    for ((idx, bit) in bits.withIndex()) {
-        if (idx > 0) {
-            parts.add("  Step $step: 2 × (${current}) → ${"G" + "²".repeat(idx)}")
-            current = "2${idx}G"
-            step++
-        }
-    }
+    parts.add("dA = $k (이진: ${binary})")
+    parts.add("")
 
-    // 더하기 과정
-    parts.add("  ---")
-    var accum = "0"
-    var needsFirst = true
+    var step = 1
+    var doubledPointStr = "G"
+    val accumulatedTerms = mutableListOf<String>()
+
     for ((idx, bit) in bits.withIndex()) {
+        val termStr = if (idx == 0) "G" else "2^${idx}·G"
+        val nextDoubledStr = "2^${idx+1}·G"
+
         if (bit == '1') {
-            val term = if (idx == 0) "G" else "2${idx}G"
-            if (needsFirst) {
-                accum = term
-                needsFirst = false
-            } else {
-                parts.add("  Step $step: $accum + $term → 중간 결과")
-                accum = "$accum + $term"
-                step++
+            accumulatedTerms.add(termStr)
+            val sumStr = accumulatedTerms.joinToString(" + ")
+            parts.add("Step $step: (bit=1) $termStr → 결과에 더함  → $sumStr")
+            step++
+            if (idx < bits.length - 1) {
+                parts.add("        : ${doubledPointStr} + ${doubledPointStr} = ${nextDoubledStr}  (double)")
+            }
+        } else {
+            parts.add("Step $step: (bit=0) $termStr → skip")
+            step++
+            if (idx < bits.length - 1) {
+                parts.add("        : ${doubledPointStr} + ${doubledPointStr} = ${nextDoubledStr}  (double)")
             }
         }
+        doubledPointStr = nextDoubledStr
     }
 
-    parts.add("결과: $resultName = $k·G = ${accum}")
+    parts.add("")
+    parts.add("$resultName = $k·G = ${accumulatedTerms.joinToString(" + ")}")
     return parts.joinToString("\n")
 }
